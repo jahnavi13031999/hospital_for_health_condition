@@ -34,6 +34,28 @@ CORS(app, resources={
     }
 })
 
+
+
+# Helper function to fetch coordinates and calculate distance
+def get_coordinates(state: str) -> Optional[Tuple[float, float]]:
+    geolocator = Nominatim(user_agent="location_distance_calculator")
+    try:
+        location = geolocator.geocode(state)
+        if location:
+            return location.latitude, location.longitude
+        return None
+    except (GeocoderTimedOut, GeocoderServiceError):
+        return None
+
+# Calculate the distance between two locations based on their coordinates
+def calculate_distance(state1: str, state2: str) -> Optional[float]:
+    coords1 = get_coordinates(state1)
+    coords2 = get_coordinates(state2)
+    
+    if coords1 and coords2:
+        return geodesic(coords1, coords2).miles
+    return None
+
 # Add CORS headers to all responses
 @app.after_request
 def after_request(response):
@@ -45,7 +67,7 @@ def after_request(response):
 # Load the dataset once when the app starts
 try:
     dataset = pd.read_csv(r"Hospital inmoratlity.csv")
-    print("Available columns:", dataset.columns.tolist())
+    # print("Available columns:", dataset.columns.tolist())
     
     # Clean column names and handle missing values
     dataset = dataset.fillna('')  
@@ -67,7 +89,7 @@ try:
     }
     
     dataset = dataset.rename(columns=column_mapping)
-    print("After mapping:", dataset.columns.tolist())
+    # print("After mapping:", dataset.columns.tolist())
     
     # Verify required columns
     required_columns = ['Provider ID', 'Hospital Name', 'Address', 'City', 
@@ -200,7 +222,7 @@ def search_locations():
             'County': 'County'
         }
         
-        print(field)
+        # print(field)
         if field not in field_mapping:
             return jsonify({"error": f"Invalid field. Valid fields are: {', '.join(field_mapping.keys())}"}), 400
             
@@ -271,18 +293,25 @@ def search_hospitals():
 
         # Get hospitals by location
         city_hospitals = filter_hospitals(dataset, city_match=True)
-        state_hospitals = filter_hospitals(dataset, city_match=False)
-        other_hospitals = [
-            Hospital.from_row(row) for _, row in dataset[
-                dataset['State'].str.lower() != state.lower()
-            ].iterrows()
+        state_hospitals = [
+            h for h in filter_hospitals(dataset, city_match=False)
+            if h.calculate_performance()[0] in ["Good", "Excellent"]
         ]
+
+        # Get top 5 hospitals outside the state, sorted by performance
+        other_hospitals = [
+            h for h in (Hospital.from_row(row) for _, row in dataset[dataset['State'].str.lower() != state.lower()].iterrows())
+            if h.calculate_performance()[0] == "Excellent"
+        ]
+
+        # Sort the other hospitals by their performance score (assuming the score is in calculate_performance())
+        other_hospitals_sorted = sorted(other_hospitals, key=lambda h: h.calculate_performance()[1], reverse=True)[:5]
 
         # Convert to response format
         grouped_hospitals = {
             "cityHospitals": [h.to_dict() for h in city_hospitals],
             "stateHospitals": [h.to_dict() for h in state_hospitals],
-            "otherHospitals": [h.to_dict() for h in other_hospitals]
+            "otherHospitals": [h.to_dict() for h in other_hospitals_sorted]
         }
 
         total_results = sum(len(hospitals) for hospitals in grouped_hospitals.values())
@@ -299,6 +328,11 @@ def search_hospitals():
         }
 
         return jsonify(response_data), 200
+
+    except Exception as e:
+        print(f"Error processing request: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
 
     except Exception as e:
         print(f"Error processing request: {str(e)}")
