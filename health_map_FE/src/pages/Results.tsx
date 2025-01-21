@@ -149,12 +149,12 @@ const Results = () => {
           </Button>
         </div>
 
-        <FilterBar
-          onSortChange={(value: 'score' | 'name') => setFilters(prev => ({ ...prev, sortBy: value }))}
-          onLocationChange={(value: 'all' | 'city' | 'state') => setFilters(prev => ({ ...prev, location: value }))}
-          onReset={handleReset}
-          currentFilters={filters}
-        />
+          {/* <FilterBar
+            onSortChange={(value: 'score' | 'name') => setFilters(prev => ({ ...prev, sortBy: value }))}
+            onLocationChange={(value: 'all' | 'city' | 'state') => setFilters(prev => ({ ...prev, location: value }))}
+            onReset={handleReset}
+            currentFilters={filters}
+          /> */}
 
         {error ? (
           <div className="text-center py-12 bg-white rounded-lg shadow-sm">

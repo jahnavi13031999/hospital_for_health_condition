@@ -1,9 +1,9 @@
-import json
 import requests
 import datetime
+import logging
+import joblib
 from flask import Flask, render_template, request, jsonify
 import pandas as pd
-import base64
 from io import BytesIO
 from os import getenv
 import pathlib
@@ -16,6 +16,9 @@ from dataclasses import dataclass
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from functools import lru_cache
 import time
+import pandas as pd
+import numpy as np
+from model import preprocess_and_train,train_evaluate_model
 
 app = Flask(__name__)
 # Enable CORS with credentials support
@@ -34,10 +37,17 @@ CORS(app, resources={
     }
 })
 
-
-
 # Helper function to fetch coordinates and calculate distance
 def get_coordinates(state: str) -> Optional[Tuple[float, float]]:
+    """
+    Fetch the geographical coordinates (latitude and longitude) for a given state.
+
+    Parameters:
+    state (str): The name of the state to fetch coordinates for.
+
+    Returns:
+    Optional[Tuple[float, float]]: A tuple containing the latitude and longitude of the state, or None if the coordinates could not be fetched.
+    """
     geolocator = Nominatim(user_agent="location_distance_calculator")
     try:
         location = geolocator.geocode(state)
@@ -66,7 +76,7 @@ def after_request(response):
 
 # Load the dataset once when the app starts
 try:
-    dataset = pd.read_csv(r"Hospital inmoratlity.csv")
+    dataset = pd.read_csv(r"modelHospitalinmoratlity.csv")
     # print("Available columns:", dataset.columns.tolist())
     
     # Clean column names and handle missing values
@@ -264,7 +274,7 @@ def search_locations():
 def search_hospitals():
     try:
         # Load dataset
-        dataset = pd.read_csv("Hospital inmoratlity.csv")
+        dataset = pd.read_csv("modelHospitalinmoratlity.csv")
         dataset = dataset.fillna('')
 
         # Get search parameters
@@ -280,6 +290,16 @@ def search_hospitals():
 
         # Filter hospitals
         def filter_hospitals(df: pd.DataFrame, city_match: bool = True) -> List[Hospital]:
+            """
+            Filter hospitals based on the provided DataFrame and matching criteria.
+
+            Parameters:
+            df (pd.DataFrame): The DataFrame containing hospital data.
+            city_match (bool): Whether to match hospitals by city (default is True).
+
+            Returns:
+            List[Hospital]: A list of Hospital objects that match the criteria.
+            """
             mask = df['State'].str.lower() == state.lower()
             if city_match:
                 mask &= df['City/Town'].str.lower() == city.lower()
@@ -333,12 +353,6 @@ def search_hospitals():
         print(f"Error processing request: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
-
-    except Exception as e:
-        print(f"Error processing request: {str(e)}")
-        return jsonify({"error": "Internal server error"}), 500
-
-
 @app.route('/api/conditions/search', methods=['GET'])
 def search_conditions():
     if dataset.empty:
@@ -359,6 +373,42 @@ def search_conditions():
 
     except Exception as e:
         print(f"Error processing request: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+@app.route('/api/update')
+def index():
+    return render_template('index.html')
+
+@app.route('/api/update_data', methods=['POST'])
+def update_data():
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        # Convert to DataFrame
+        new_data = pd.DataFrame([data])
+
+        # Load existing data from CSV
+        excel_path = r'modelHospitalinmoratlity.csv'
+        if os.path.exists(excel_path):
+            existing_data = pd.read_csv(excel_path)
+            # Append new data to existing data
+            updated_data = pd.concat([existing_data, new_data], ignore_index=True)
+        else:
+            updated_data = new_data
+
+        # Save updated data back to CSV
+        updated_data.to_csv(excel_path, index=False)
+
+        # df = pd.read_csv("Hospital inmoratlity.csv")
+        preprocess_and_train(updated_data)
+
+        return jsonify({"message": "Data updated successfully"}), 200
+
+    except Exception as e:
+        logging.error(f"Error updating data: {str(e)}", exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
 
 
