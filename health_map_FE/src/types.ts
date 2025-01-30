@@ -31,7 +31,7 @@ export interface FilterState {
 export interface GroupedHospitals {
     cityHospitals: Hospital[];
     stateHospitals: Hospital[];
-    otherHospitals: Hospital[];
+    // otherHospitals: Hospital[];
 }
 
 export interface PaginationState {

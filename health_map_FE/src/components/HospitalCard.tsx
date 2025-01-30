@@ -49,8 +49,8 @@ export const HospitalCard = memo(({ hospital, className }: HospitalCardProps) =>
 
         {hospital.statistics && (
           <div className="text-sm text-gray-500">
-            <p>Sample size: {hospital.statistics.denominator}</p>
-            <p>Range: {hospital.statistics.lowerEstimate}% - {hospital.statistics.higherEstimate}%</p>
+            <p>Patients Count: {hospital.statistics.denominator}</p>
+            <p>Success rate: {hospital.statistics.lowerEstimate}% - {hospital.statistics.higherEstimate}%</p>
           </div>
         )}
       </div>

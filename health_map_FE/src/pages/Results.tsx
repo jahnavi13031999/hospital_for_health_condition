@@ -16,10 +16,9 @@ const Results = () => {
   const { location: userLocation, healthIssue } = location.state || {};
 
   const [hospitals, setHospitals] = useState<GroupedHospitals>({
-    cityHospitals: [],
-    stateHospitals: [],
-    otherHospitals: []
-  });
+                                    cityHospitals: [],
+                                    stateHospitals: []
+                                  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({
@@ -40,11 +39,12 @@ const Results = () => {
       stateHospitals: hospitals.stateHospitals.filter(hospital =>
         filters.location === 'all' ||
         (filters.location !== 'city' && hospital.locationRelevance === 'state')
-      ),
-      otherHospitals: hospitals.otherHospitals.filter(hospital =>
-        filters.location === 'all' ||
-        (filters.location !== 'city' && hospital.locationRelevance === 'other')
       )
+      // ,
+      // otherHospitals: hospitals.otherHospitals.filter(hospital =>
+      //   filters.location === 'all' ||
+      //   (filters.location !== 'city' && hospital.locationRelevance === 'other')
+      // )
     };
 
     // Apply sorting
@@ -58,8 +58,8 @@ const Results = () => {
 
     return {
       cityHospitals: [...allHospitals.cityHospitals].sort(sortFn),
-      stateHospitals: [...allHospitals.stateHospitals].sort(sortFn),
-      otherHospitals: [...allHospitals.otherHospitals].sort(sortFn)
+      stateHospitals: [...allHospitals.stateHospitals].sort(sortFn)
+      // otherHospitals: [...allHospitals.otherHospitals].sort(sortFn)
     };
   }, [hospitals, filters]);
 
@@ -228,7 +228,7 @@ const Results = () => {
               </section>
             )}
 
-            {filteredHospitals.otherHospitals.length > 0 && (
+            {/* {filteredHospitals.otherHospitals.length > 0 && (
               <section className="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="border-l-4 border-purple-500 p-6">
                   <h2 className="text-2xl font-semibold text-gray-900 mb-2">
@@ -256,7 +256,7 @@ const Results = () => {
                   No hospitals found matching your criteria.
                 </p>
               </div>
-            )}
+            )} */}
 
             <div className="flex justify-center gap-2 mt-8">
               <Button
